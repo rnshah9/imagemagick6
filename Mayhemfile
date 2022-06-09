@@ -1,7 +1,6 @@
-project: rnshah9/imagemagick6
+project: imagemagick6
 target: convert
-tests: null
 
 cmds:
-  - cmd: /usr/local/bin/convert @@ out.png
+  - cmd: /usr/local/bin/convert /test.jpg /dev/null
     filepath: /test.jpg
