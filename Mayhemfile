@@ -2,5 +2,4 @@ project: imagemagick6
 target: convert
 
 cmds:
-  - cmd: /usr/local/bin/convert /test.jpg /dev/null
-    filepath: /test.jpg
+  - cmd: /install/bin/convert @@ /dev/null
