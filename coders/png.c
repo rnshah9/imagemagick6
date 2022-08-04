@@ -2862,7 +2862,7 @@ static Image *ReadOnePNGImage(MngInfo *mng_info,
                    png_get_valid(ping,ping_info,PNG_INFO_bKGD))
                     {
                       png_color_16
-                         background;
+                         background = { 0 };
 
 #ifndef PNG_READ_EMPTY_PLTE_SUPPORTED
                       if (mng_info->have_saved_bkgd_index)
@@ -4063,6 +4063,7 @@ static Image *ReadOnePNGImage(MngInfo *mng_info,
    *    Throwing an Exception when an error occurs.
    */
 
+  image->depth=ping_file_depth;
   return(image);
 
 /* end of reading one PNG image */
@@ -4967,8 +4968,12 @@ static Image *ReadOneJNGImage(MngInfo *mng_info,
           else
             for (x=(ssize_t) image->columns; x != 0; x--,q++,s++)
             {
-              SetPixelAlpha(q,GetPixelRed(s));
-              if (GetPixelOpacity(q) != OpaqueOpacity)
+              Quantum
+                alpha;
+
+              alpha=GetPixelRed(s);
+              SetPixelAlpha(q,alpha);
+              if (alpha != OpaqueOpacity)
                 image->matte=MagickTrue;
             }
 
@@ -10914,7 +10919,7 @@ static MagickBooleanType WriteOnePNGImage(MngInfo *mng_info,
                       (void) LogMagickEvent(CoderEvent,GetMagickModule(),
                           "  Setting up iCCP chunk");
 
-                       png_set_iCCP(ping,ping_info,(const png_charp) name,0,
+                       png_set_iCCP(ping,ping_info,(png_charp) name,0,
 #if (PNG_LIBPNG_VER < 10500)
                          (png_charp) GetStringInfoDatum(profile),
 #else
@@ -12073,8 +12078,10 @@ static MagickBooleanType WritePNGImage(const ImageInfo *image_info,Image *image)
       mng_info->write_png_colortype = /* 6 */  7;
       mng_info->write_png_depth = 8;
       image->depth = 8;
-      image->matte = MagickTrue;
-      (void) SetImageType(image,TrueColorMatteType);
+      if (image->matte != MagickFalse)
+        (void) SetImageType(image,TrueColorMatteType);
+      else
+        (void) SetImageType(image,TrueColorType);
       (void) SyncImage(image);
     }
 
@@ -12083,13 +12090,10 @@ static MagickBooleanType WritePNGImage(const ImageInfo *image_info,Image *image)
       mng_info->write_png_colortype = /* 2 */ 3;
       mng_info->write_png_depth = 16;
       image->depth = 16;
-
       if (image->matte != MagickFalse)
         (void) SetImageType(image,TrueColorMatteType);
-
       else
         (void) SetImageType(image,TrueColorType);
-
       (void) SyncImage(image);
     }
 
@@ -12098,8 +12102,10 @@ static MagickBooleanType WritePNGImage(const ImageInfo *image_info,Image *image)
       mng_info->write_png_colortype = /* 6 */  7;
       mng_info->write_png_depth = 16;
       image->depth = 16;
-      image->matte = MagickTrue;
-      (void) SetImageType(image,TrueColorMatteType);
+      if (image->matte != MagickFalse)
+        (void) SetImageType(image,TrueColorMatteType);
+      else
+        (void) SetImageType(image,TrueColorType);
       (void) SyncImage(image);
     }
 
@@ -13282,7 +13288,7 @@ static MagickBooleanType WriteMNGImage(const ImageInfo *image_info,Image *image)
     status;
 
   volatile MagickBooleanType
-    logging;
+    logging = MagickFalse;
 
   MngInfo
     *mng_info;

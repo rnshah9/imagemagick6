@@ -317,7 +317,7 @@ static Image *RenderSVGImage(const ImageInfo *image_info,Image *image,
     100.0*QuantumScale*image->background_color.green,
     100.0*QuantumScale*image->background_color.blue);
   (void) FormatLocaleString(opacity,MagickPathExtent,"%.20g",QuantumScale*
-    (QuantumRange-image->background_color.opacity)-MagickEpsilon);
+    (QuantumRange-image->background_color.opacity));
   (void) FormatLocaleString(command,MagickPathExtent,
     GetDelegateCommands(delegate_info),input_filename,output_filename,density,
     background,opacity,unique);
@@ -3651,12 +3651,13 @@ static Image *RenderMSVGImage(const ImageInfo *image_info,Image *image,
     }
   svg_info=DestroySVGInfo(svg_info);
   (void) RelinquishUniqueFileResource(filename);
-  for (next=GetFirstImageInList(image); next != (Image *) NULL; )
-  {
-    (void) CopyMagickString(next->filename,image->filename,MaxTextExtent);
-    (void) CopyMagickString(next->magick,"SVG",MaxTextExtent);
-    next=GetNextImageInList(next);
-  }
+  if (image != (Image *) NULL)
+    for (next=GetFirstImageInList(image); next != (Image *) NULL; )
+    {
+      (void) CopyMagickString(next->filename,image->filename,MaxTextExtent);
+      (void) CopyMagickString(next->magick,"SVG",MaxTextExtent);
+      next=GetNextImageInList(next);
+    }
   return(GetFirstImageInList(image));
 }
 #else

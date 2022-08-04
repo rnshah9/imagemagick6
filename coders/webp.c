@@ -1066,6 +1066,9 @@ static MagickBooleanType WriteWEBPImage(const ImageInfo *image_info,
   if (value != (char *) NULL)
     configure.use_sharp_yuv=StringToInteger(value);
 #endif
+  if ((configure.target_size > 0 || configure.target_PSNR > 0) &&
+      (configure.pass == 1))
+    configure.pass=6;
   if (WebPValidateConfig(&configure) == 0)
     ThrowWriterException(ResourceLimitError,"UnableToEncodeImageFile");
 
@@ -1074,9 +1077,9 @@ static MagickBooleanType WriteWEBPImage(const ImageInfo *image_info,
 #if defined(MAGICKCORE_WEBPMUX_DELEGATE)
   if ((image_info->adjoin != MagickFalse) &&
       (GetPreviousImageInList(image) == (Image *) NULL) &&
-      (GetNextImageInList(image) != (Image *) NULL) &&
-      (image->iterations != 1))
-    WriteAnimatedWEBPImage(image_info,image,&configure,&writer_info,&image->exception);
+      (GetNextImageInList(image) != (Image *) NULL))
+    WriteAnimatedWEBPImage(image_info,image,&configure,&writer_info,
+      &image->exception);
 #endif
 
   webp_status=WebPEncode(&configure,&picture);

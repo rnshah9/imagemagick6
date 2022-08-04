@@ -1832,10 +1832,9 @@ MagickExport size_t MultilineCensus(const char *label)
 %                                                                             %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
-%  ShredFile() overwrites the specified file with zeros or random data and then
-%  removes it.  The overwrite is optional and is only required to help keep
-%  the contents of the file private.  On the first pass, the file is zeroed.
-%  For subsequent passes, random data is written.
+%  ShredFile() overwrites the specified file with random data.  The overwrite
+%  is optional and is only required to help keep the contents of the file
+%  private.
 %
 %  The format of the ShredFile method is:
 %
@@ -1848,9 +1847,6 @@ MagickExport size_t MultilineCensus(const char *label)
 */
 MagickPrivate MagickBooleanType ShredFile(const char *path)
 {
-  char
-    *passes;
-
   int
     file,
     status;
@@ -1858,60 +1854,61 @@ MagickPrivate MagickBooleanType ShredFile(const char *path)
   MagickSizeType
     length;
 
-  ssize_t
-    i;
+  RandomInfo
+    *random_info;
 
   size_t
     quantum;
+
+  ssize_t
+    i;
+
+  static ssize_t
+    passes = -1;
+
+  StringInfo
+    *key;
 
   struct stat
     file_stats;
 
   if ((path == (const char *) NULL) || (*path == '\0'))
     return(MagickFalse);
-  passes=GetPolicyValue("system:shred");
-  if (passes == (char *) NULL)
-    passes=GetEnvironmentValue("MAGICK_SHRED_PASSES");
-  if (passes == (char *) NULL)
+  if (passes == -1)
     {
-      /*
-        Don't shred the file, just remove it.
-      */
-      passes=DestroyString(passes);
-      status=remove_utf8(path);
-      if (status == -1)
+      char
+        *property;
+          
+      passes=0;
+      property=GetEnvironmentValue("MAGICK_SHRED_PASSES");
+      if (property != (char *) NULL)
         {
-          (void) LogMagickEvent(ExceptionEvent,GetMagickModule(),
-            "Failed to remove: %s",path);
-          return(MagickFalse);
+          passes=(ssize_t) StringToInteger(property);
+          property=DestroyString(property);
         }
-      return(MagickTrue);
+      property=GetPolicyValue("system:shred");
+      if (property != (char *) NULL)
+        {
+          passes=(ssize_t) StringToInteger(property);
+          property=DestroyString(property);
+        }
     }
+  if (passes == 0)
+    return(MagickTrue);
   file=open_utf8(path,O_WRONLY | O_EXCL | O_BINARY,S_MODE);
   if (file == -1)
-    {
-      /*
-        Don't shred the file, just remove it.
-      */
-      passes=DestroyString(passes);
-      status=remove_utf8(path);
-      if (status == -1)
-        (void) LogMagickEvent(ExceptionEvent,GetMagickModule(),
-          "Failed to remove: %s",path);
-      return(MagickFalse);
-    }
+    return(MagickFalse);
   /*
     Shred the file.
   */
-  quantum=(size_t) MagickMaxBufferExtent;
+  quantum=(size_t) MagickMinBufferExtent;
   if ((fstat(file,&file_stats) == 0) && (file_stats.st_size > 0))
-    quantum=(size_t) MagickMin(file_stats.st_size,MagickMaxBufferExtent);
+    quantum=(size_t) MagickMin(file_stats.st_size,MagickMinBufferExtent);
   length=(MagickSizeType) file_stats.st_size;
-  for (i=0; i < (ssize_t) StringToInteger(passes); i++)
+  random_info=AcquireRandomInfo();
+  key=GetRandomKey(random_info,quantum);
+  for (i=0; i < passes; i++)
   {
-    RandomInfo
-      *random_info;
-
     MagickOffsetType
       j;
 
@@ -1920,18 +1917,12 @@ MagickPrivate MagickBooleanType ShredFile(const char *path)
 
     if (lseek(file,0,SEEK_SET) < 0)
       break;
-    random_info=AcquireRandomInfo();
     for (j=0; j < (MagickOffsetType) length; j+=count)
     {
-      StringInfo
-        *key;
-
-      key=GetRandomKey(random_info,quantum);
-      if (i == 0)
-        ResetStringInfo(key);  /* zero on first pass */
+      if (i != 0)
+        SetRandomKey(random_info,quantum,GetStringInfoDatum(key));
       count=write(file,GetStringInfoDatum(key),(size_t)
         MagickMin((MagickSizeType) quantum,length-j));
-      key=DestroyStringInfo(key);
       if (count <= 0)
         {
           count=0;
@@ -1939,14 +1930,11 @@ MagickPrivate MagickBooleanType ShredFile(const char *path)
             break;
         }
     }
-    random_info=DestroyRandomInfo(random_info);
     if (j < (MagickOffsetType) length)
       break;
   }
+  key=DestroyStringInfo(key);
+  random_info=DestroyRandomInfo(random_info);
   status=close(file);
-  status=remove_utf8(path);
-  if (status != -1)
-    status=StringToInteger(passes);
-  passes=DestroyString(passes);
-  return((status == -1 || i < (ssize_t) status) ? MagickFalse : MagickTrue);
+  return((status == -1 || i < passes) ? MagickFalse : MagickTrue);
 }

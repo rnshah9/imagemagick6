@@ -279,7 +279,7 @@ ModuleExport size_t RegisterVIDEOImage(void)
   entry->description=ConstantString("MPEG Video Stream");
   entry->magick_module=ConstantString("VIDEO");
   (void) RegisterMagickInfo(entry);
-  entry=SetMagickInfo("VIDEO");
+  entry=SetMagickInfo("MPEG");
   entry->decoder=(DecodeImageHandler *) ReadVIDEOImage;
   entry->encoder=(EncodeImageHandler *) WriteVIDEOImage;
   entry->magick=(IsImageFormatHandler *) IsVIDEO;
@@ -322,6 +322,15 @@ ModuleExport size_t RegisterVIDEOImage(void)
   entry->blob_support=MagickFalse;
   entry->seekable_stream=MagickTrue;
   entry->description=ConstantString("Raw VIDEO-4 Video");
+  entry->magick_module=ConstantString("VIDEO");
+  (void) RegisterMagickInfo(entry);
+  entry=SetMagickInfo("VIDEO");
+  entry->decoder=(DecodeImageHandler *) ReadVIDEOImage;
+  entry->encoder=(EncodeImageHandler *) WriteVIDEOImage;
+  entry->magick=(IsImageFormatHandler *) IsVIDEO;
+  entry->blob_support=MagickFalse;
+  entry->seekable_stream=MagickTrue;
+  entry->description=ConstantString("MPEG Video Stream");
   entry->magick_module=ConstantString("VIDEO");
   (void) RegisterMagickInfo(entry);
   entry=SetMagickInfo("WEBM");

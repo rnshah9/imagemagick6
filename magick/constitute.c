@@ -829,6 +829,8 @@ MagickExport Image *ReadImage(const ImageInfo *image_info,
       }
     if (source_date_epoch == (const char *) NULL)
       {
+        (void) FormatMagickTime(image->timestamp,MaxTextExtent,timestamp);
+        (void) SetImageProperty(next,"date:timestamp",timestamp);
         (void) FormatMagickTime((time_t) GetBlobProperties(next)->st_mtime,
           MaxTextExtent,timestamp);
         (void) SetImageProperty(next,"date:modify",timestamp);
@@ -1417,6 +1419,8 @@ MagickExport MagickBooleanType WriteImages(const ImageInfo *image_info,
   write_info=CloneImageInfo(image_info);
   *write_info->magick='\0';
   images=GetFirstImageInList(images);
+  if (images == (Image *) NULL)
+    return(MagickFalse);
   if (filename != (const char *) NULL)
     for (p=images; p != (Image *) NULL; p=GetNextImageInList(p))
       (void) CopyMagickString(p->filename,filename,MaxTextExtent);

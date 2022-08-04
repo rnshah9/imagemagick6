@@ -323,6 +323,7 @@ static void ColorFormatLocaleFile(FILE *file,const char *format,Image *image,
   MagickPixelPacket
     pixel;
 
+  assert(p != (const PixelPacket *) NULL);
   GetMagickPixelPacket(image,&pixel);
   SetMagickPixelPacket(image,p,index,&pixel);
   GetColorTuple(&pixel,MagickTrue,color);

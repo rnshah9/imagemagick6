@@ -1114,6 +1114,7 @@ static inline void RelinquishPixelCachePixels(CacheInfo *cache_info)
   {
     case MemoryCache:
     {
+      (void) ShredMagickMemory(cache_info->pixels,(size_t) cache_info->length);
 #if defined(MAGICKCORE_OPENCL_SUPPORT)
       if (RelinquishOpenCLBuffer(cache_info) != MagickFalse)
         {
@@ -1125,7 +1126,10 @@ static inline void RelinquishPixelCachePixels(CacheInfo *cache_info)
         cache_info->pixels=(PixelPacket *) RelinquishAlignedMemory(
           cache_info->pixels);
       else
-        (void) UnmapBlob(cache_info->pixels,(size_t) cache_info->length);
+        {
+          (void) UnmapBlob(cache_info->pixels,(size_t) cache_info->length);
+          cache_info->pixels=(PixelPacket *) NULL;
+        }
       RelinquishMagickResource(MemoryResource,cache_info->length);
       break;
     }
@@ -3778,13 +3782,12 @@ static inline MagickOffsetType WritePixelCacheRegion(
     i;
 
   ssize_t
-    count;
+    count = 0;
 
 #if !defined(MAGICKCORE_HAVE_PWRITE)
   if (lseek(cache_info->file,offset,SEEK_SET) < 0)
     return((MagickOffsetType) -1);
 #endif
-  count=0;
   for (i=0; i < (MagickOffsetType) length; i+=count)
   {
 #if !defined(MAGICKCORE_HAVE_PWRITE)
@@ -3810,8 +3813,6 @@ static MagickBooleanType SetPixelCacheExtent(Image *image,MagickSizeType length)
     *magick_restrict cache_info;
 
   MagickOffsetType
-    count,
-    extent,
     offset;
 
   cache_info=(CacheInfo *) image->cache;
@@ -3830,10 +3831,12 @@ static MagickBooleanType SetPixelCacheExtent(Image *image,MagickSizeType length)
   offset=(MagickOffsetType) lseek(cache_info->file,0,SEEK_END);
   if (offset < 0)
     return(MagickFalse);
-  if ((MagickSizeType) offset >= length)
-    count=(MagickOffsetType) 1;
-  else
+  if ((MagickSizeType) offset < length)
     {
+      MagickOffsetType
+        count,
+        extent;
+
       extent=(MagickOffsetType) length-1;
       count=WritePixelCacheRegion(cache_info,extent,1,(const unsigned char *)
         "");
@@ -4586,13 +4589,12 @@ static inline MagickOffsetType ReadPixelCacheRegion(
     i;
 
   ssize_t
-    count;
+    count = 0;
 
 #if !defined(MAGICKCORE_HAVE_PREAD)
   if (lseek(cache_info->file,offset,SEEK_SET) < 0)
     return((MagickOffsetType) -1);
 #endif
-  count=0;
   for (i=0; i < (MagickOffsetType) length; i+=count)
   {
 #if !defined(MAGICKCORE_HAVE_PREAD)
@@ -5300,9 +5302,6 @@ static PixelPacket *SetPixelCacheNexusPixels(
 static MagickBooleanType SetCacheAlphaChannel(Image *image,
   const Quantum opacity)
 {
-  CacheInfo
-    *magick_restrict cache_info;
-
   CacheView
     *magick_restrict image_view;
 
@@ -5317,8 +5316,6 @@ static MagickBooleanType SetCacheAlphaChannel(Image *image,
   if (IsEventLogging() != MagickFalse)
     (void) LogMagickEvent(TraceEvent,GetMagickModule(),"%s",image->filename);
   assert(image->cache != (Cache) NULL);
-  cache_info=(CacheInfo *) image->cache;
-  assert(cache_info->signature == MagickCoreSignature);
   image->matte=MagickTrue;
   status=MagickTrue;
   image_view=AcquireVirtualCacheView(image,&image->exception);  /* must be virtual */
@@ -5750,6 +5747,8 @@ static MagickBooleanType WritePixelCacheIndexes(CacheInfo *cache_info,
     return(MagickFalse);
   if (nexus_info->authentic_pixel_cache != MagickFalse)
     return(MagickTrue);
+  if (nexus_info->indexes == (IndexPacket *) NULL)
+    return(MagickFalse);
   offset=(MagickOffsetType) nexus_info->region.y*cache_info->columns+
     nexus_info->region.x;
   length=(MagickSizeType) nexus_info->region.width*sizeof(IndexPacket);
