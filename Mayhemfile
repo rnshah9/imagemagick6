@@ -1,0 +1,5 @@
+project: imagemagick6
+target: convert
+
+cmds:
+  - cmd: /install/bin/convert @@ /dev/null
